@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rompecabezas de Manuelita</title>
+<style>
+body{margin:0;font-family:sans-serif;background:#e8f6ff;text-align:center}
+h1{color:#2a7a3b}
+#p{display:grid;grid-template-columns:repeat(3,100px);gap:2px;justify-content:center}
+.t{width:100px;height:100px;background-size:300px 300px;cursor:pointer;border-radius:4px}
+.s{outline:4px solid #f5a623}
+button{margin:16px;padding:10px 20px;font-size:16px;border:0;border-radius:8px;background:#2a7a3b;color:#fff}
+</style>
+</head>
+<body>
+<h1>🐢 Manuelita</h1>
+<p>Toca dos piezas para cambiarlas de lugar.</p>
+<div id="p"></div>
+<p id="m"></p>
+<button onclick="mezclar()">Mezclar</button>
+<script>
+const img = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+<rect width="300" height="300" fill="#bfe8ff"/><circle cx="250" cy="50" r="30" fill="#ffd93b"/>
+<rect y="230" width="300" height="70" fill="#7ccf6a"/>
+<ellipse cx="235" cy="175" rx="35" ry="28" fill="#8fd18a"/>
+<circle cx="245" cy="168" r="5"/><path d="M235 188q10 6 20 0" stroke="#000" stroke-width="3" fill="none"/>
+<rect x="85" y="200" width="25" height="40" rx="10" fill="#8fd18a"/><rect x="170" y="200" width="25" height="40" rx="10" fill="#8fd18a"/>
+<ellipse cx="140" cy="180" rx="90" ry="65" fill="#4f9b3f"/>
+<path d="M90 180h100M140 120v120M105 140l70 80M175 140l-70 80" stroke="#2f6b25" stroke-width="5"/>
+<path d="M210 140l25-35 15 30z" fill="#e0407b"/><circle cx="235" cy="110" r="6" fill="#fff"/>
+<text x="150" y="285" font-size="26" text-anchor="middle" fill="#2a5">Manuelita</text></svg>`);
+const p = document.getElementById('p'), m = document.getElementById('m');
+let orden = [], sel = null;
+function dibujar() {
+  p.innerHTML = '';
+  orden.forEach((n, i) => {
+    const d = document.createElement('div');
+    d.className = 't' + (sel === i ? ' s' : '');
+    d.style.backgroundImage = `url("${img}")`;
+    d.style.backgroundPosition = `-${n % 3 * 100}px -${Math.floor(n / 3) * 100}px`;
+    d.onclick = () => tocar(i);
+    p.appendChild(d);
+  });
+  m.textContent = orden.every((n, i) => n === i) ? '¡Muy bien! 🎉' : '';
+}
+function tocar(i) {
+  if (sel === null) sel = i;
+  else { [orden[sel], orden[i]] = [orden[i], orden[sel]]; sel = null; }
+  dibujar();
+}
+function mezclar() {
+  do orden = [...Array(9).keys()].sort(() => Math.random() - .5);
+  while (orden.every((n, i) => n === i));
+  sel = null; dibujar();
+}
+mezclar();
+</script>
+</body>
+</html>
