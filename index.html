@@ -2,59 +2,416 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Rompecabezas de Manuelita</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Manuelita 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
 <style>
-body{margin:0;font-family:sans-serif;background:#e8f6ff;text-align:center}
-h1{color:#2a7a3b}
-#p{display:grid;grid-template-columns:repeat(3,100px);gap:2px;justify-content:center}
-.t{width:100px;height:100px;background-size:300px 300px;cursor:pointer;border-radius:4px}
-.s{outline:4px solid #f5a623}
-button{margin:16px;padding:10px 20px;font-size:16px;border:0;border-radius:8px;background:#2a7a3b;color:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#8fd8ff;font-family:'Baloo 2',system-ui,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block}
+#hud{position:fixed;top:12px;left:12px;display:flex;align-items:center;gap:10px;background:#fff;border-radius:20px;padding:6px 14px 6px 6px;font-size:26px;font-weight:800;color:#2a7a3b;box-shadow:0 5px 0 #2a7a3b}
+#hud img{width:56px;height:56px;border-radius:12px}
+#msg{position:fixed;top:90px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);background:#fff;color:#c2346f;border-radius:20px;padding:6px 18px;font-size:22px;font-weight:800;text-align:center;box-shadow:0 5px 0 #c2346f;transition:opacity .4s}
+#msg.off{opacity:0}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0005;padding:16px}
+.ov.off{display:none}
+.card{background:#fff;border-radius:28px;padding:22px;max-width:420px;text-align:center;box-shadow:0 8px 0 #2a7a3b}
+.card h1{margin:0;color:#2a7a3b;font-size:34px;line-height:1.1}
+.card p{font-size:19px;color:#355;margin:10px 0 18px}
+.card img{width:180px;border-radius:18px;box-shadow:0 4px 0 #0002}
+.big{font:inherit;font-size:26px;font-weight:800;padding:10px 34px;border:0;border-radius:40px;background:#ff4f9a;color:#fff;box-shadow:0 6px 0 #c2346f;cursor:pointer}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #c2346f}
+#pad button{position:fixed;width:74px;height:74px;border-radius:50%;border:0;background:#fffd;font-size:32px;color:#2a7a3b;box-shadow:0 5px 0 #0003;touch-action:none}
+#pad button:active{transform:translateY(3px)}
 </style>
 </head>
 <body>
-<h1>🐢 Manuelita</h1>
-<p>Toca dos piezas para cambiarlas de lugar.</p>
-<div id="p"></div>
-<p id="m"></p>
-<button onclick="mezclar()">Mezclar</button>
-<script>
-const img = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
-<rect width="300" height="300" fill="#bfe8ff"/><circle cx="250" cy="50" r="30" fill="#ffd93b"/>
-<rect y="230" width="300" height="70" fill="#7ccf6a"/>
-<ellipse cx="235" cy="175" rx="35" ry="28" fill="#8fd18a"/>
-<circle cx="245" cy="168" r="5"/><path d="M235 188q10 6 20 0" stroke="#000" stroke-width="3" fill="none"/>
-<rect x="85" y="200" width="25" height="40" rx="10" fill="#8fd18a"/><rect x="170" y="200" width="25" height="40" rx="10" fill="#8fd18a"/>
-<ellipse cx="140" cy="180" rx="90" ry="65" fill="#4f9b3f"/>
-<path d="M90 180h100M140 120v120M105 140l70 80M175 140l-70 80" stroke="#2f6b25" stroke-width="5"/>
-<path d="M210 140l25-35 15 30z" fill="#e0407b"/><circle cx="235" cy="110" r="6" fill="#fff"/>
-<text x="150" y="285" font-size="26" text-anchor="middle" fill="#2a5">Manuelita</text></svg>`);
-const p = document.getElementById('p'), m = document.getElementById('m');
-let orden = [], sel = null;
-function dibujar() {
-  p.innerHTML = '';
-  orden.forEach((n, i) => {
-    const d = document.createElement('div');
-    d.className = 't' + (sel === i ? ' s' : '');
-    d.style.backgroundImage = `url("${img}")`;
-    d.style.backgroundPosition = `-${n % 3 * 100}px -${Math.floor(n / 3) * 100}px`;
-    d.onclick = () => tocar(i);
-    p.appendChild(d);
+<div id="hud"><img id="mini" alt="Manuelita"><span id="count">🧩 0 / 9</span></div>
+<div id="msg" class="off"></div>
+<div id="pad">
+  <button data-k="left" style="left:16px;bottom:24px">◀</button>
+  <button data-k="right" style="left:102px;bottom:24px">▶</button>
+  <button data-k="up" style="right:16px;bottom:108px">▲</button>
+  <button data-k="down" style="right:16px;bottom:24px">▼</button>
+  <button data-k="jump" style="right:102px;bottom:24px">⭐</button>
+</div>
+<div id="start" class="ov"><div class="card">
+  <h1>🐢 Manuelita y el rompecabezas mágico</h1>
+  <p>Las piezas del dibujo de Manuelita se perdieron en el campo de Pehuajó.<br>
+  <b>Camina</b> con las flechas, <b>salta</b> con ⭐ (o espacio), junta las piezas brillantes
+  y llévalas a su lugar en el tablero. ¡Sigue la flecha amarilla!</p>
+  <button class="big" id="play">¡A jugar!</button>
+</div></div>
+<div id="win" class="ov off"><div class="card">
+  <h1>🎉 ¡Lo lograste! 🎉</h1>
+  <p>¡Armaste a Manuelita!</p>
+  <img id="winpic" alt="Manuelita"><br><br>
+  <button class="big" id="again">Jugar otra vez</button>
+</div></div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+try { await document.fonts.load('800 60px "Baloo 2"'); } catch (e) {}
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+// ---------- Dibujo de Manuelita (la imagen del rompecabezas) ----------
+const pic = document.createElement('canvas'); pic.width = pic.height = 600;
+const g = pic.getContext('2d');
+const circ = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+function hexPath(c, x, y, r) { c.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i + Math.PI / 6; c.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); } c.closePath(); }
+{
+  const sky = g.createLinearGradient(0, 0, 0, 600); sky.addColorStop(0, '#5ec8ff'); sky.addColorStop(1, '#d6f3ff');
+  g.fillStyle = sky; g.fillRect(0, 0, 600, 600);
+  g.strokeStyle = '#ffc93b'; g.lineWidth = 10; g.lineCap = 'round';
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; g.beginPath(); g.moveTo(500 + Math.cos(a) * 68, 95 + Math.sin(a) * 68); g.lineTo(500 + Math.cos(a) * 92, 95 + Math.sin(a) * 92); g.stroke(); }
+  circ(500, 95, 52, '#ffd93b');
+  [[60, 110], [230, 70]].forEach(([x, y]) => { circ(x, y, 28, '#fff'); circ(x + 34, y - 14, 34, '#fff'); circ(x + 68, y, 28, '#fff'); g.fillRect(x, y, 68, 28); });
+  g.fillStyle = '#8bd672'; g.beginPath(); g.moveTo(0, 420); g.quadraticCurveTo(160, 360, 320, 410); g.quadraticCurveTo(470, 450, 600, 390); g.lineTo(600, 600); g.lineTo(0, 600); g.fill();
+  g.fillStyle = '#6cc45a'; g.beginPath(); g.moveTo(0, 490); g.quadraticCurveTo(300, 450, 600, 490); g.lineTo(600, 600); g.lineTo(0, 600); g.fill();
+  [[45, 505, '#ff5fa2'], [100, 548, '#ffd93b'], [555, 495, '#b07cff'], [515, 548, '#fff']].forEach(([x, y, c]) => {
+    for (let k = 0; k < 5; k++) { const a = k * Math.PI * 2 / 5; circ(x + Math.cos(a) * 10, y + Math.sin(a) * 10, 8, c); }
+    circ(x, y, 6, '#ffb300');
   });
-  m.textContent = orden.every((n, i) => n === i) ? '¡Muy bien! 🎉' : '';
+  g.fillStyle = '#7cc377'; g.beginPath(); g.moveTo(125, 415); g.lineTo(68, 445); g.lineTo(130, 448); g.fill();
+  [150, 230, 330, 405].forEach(x => { g.beginPath(); g.roundRect(x, 400, 56, 85, 24); g.fill(); });
+  g.fillStyle = '#f0c85a'; g.beginPath(); g.roundRect(100, 392, 390, 40, 20); g.fill();
+  g.save(); g.beginPath(); g.ellipse(295, 405, 190, 165, 0, Math.PI, 0); g.closePath(); g.fillStyle = '#3f8f35'; g.fill(); g.clip();
+  g.lineWidth = 8; g.strokeStyle = '#2b6a23';
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 7; c++) { hexPath(g, 90 + c * 70 + (r % 2 ? 35 : 0), 250 + r * 60, 34); g.fillStyle = (r + c) % 2 ? '#58a84a' : '#4a9a3e'; g.fill(); g.stroke(); }
+  g.restore();
+  g.lineWidth = 8; g.strokeStyle = '#2b6a23'; g.beginPath(); g.ellipse(295, 405, 190, 165, 0, Math.PI, 0); g.stroke();
+  g.fillStyle = '#7cc377'; g.beginPath(); g.roundRect(455, 320, 60, 90, 30); g.fill();
+  circ(505, 300, 62, '#8fd18a');
+  circ(522, 282, 18, '#fff'); circ(528, 284, 10, '#222'); circ(532, 279, 4, '#fff');
+  g.globalAlpha = .5; circ(530, 325, 11, '#ff6fa8'); g.globalAlpha = 1;
+  g.strokeStyle = '#2b5a23'; g.lineWidth = 5; g.beginPath(); g.arc(525, 300, 26, 0.5, 1.5); g.stroke();
+  g.fillStyle = '#ff4f9a';
+  g.beginPath(); g.moveTo(490, 240); g.lineTo(450, 213); g.lineTo(455, 265); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(490, 240); g.lineTo(530, 210); g.lineTo(528, 262); g.closePath(); g.fill();
+  circ(490, 240, 12, '#d6337a');
+  g.font = '800 64px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.lineJoin = 'round';
+  g.lineWidth = 12; g.strokeStyle = '#2a7a3b'; g.strokeText('Manuelita', 300, 578);
+  g.fillStyle = '#fff'; g.fillText('Manuelita', 300, 578);
 }
-function tocar(i) {
-  if (sel === null) sel = i;
-  else { [orden[sel], orden[i]] = [orden[i], orden[sel]]; sel = null; }
-  dibujar();
+$('mini').src = $('winpic').src = pic.toDataURL();
+
+const tex = [...Array(9)].map((_, n) => {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.drawImage(pic, (n % 3) * 200, Math.floor(n / 3) * 200, 200, 200, 0, 0, 256, 256);
+  x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(3, 3, 250, 250);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+});
+
+// ---------- Escena ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#8fd8ff');
+scene.fog = new THREE.Fog('#8fd8ff', 60, 150);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 400);
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+scene.add(new THREE.HemisphereLight('#ffffff', '#5a9a4a', 1.3));
+const sun = new THREE.DirectionalLight('#fff4d6', 2.2);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -25, right: 25, top: 25, bottom: -25, near: 1, far: 100 });
+scene.add(sun, sun.target);
+
+const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: .75, ...o });
+function M(geo, m, x = 0, y = 0, z = 0, parent = scene) {
+  const me = new THREE.Mesh(geo, typeof m === 'string' ? mat(m) : m);
+  me.position.set(x, y, z); me.castShadow = me.receiveShadow = true; parent.add(me); return me;
 }
-function mezclar() {
-  do orden = [...Array(9).keys()].sort(() => Math.random() - .5);
-  while (orden.every((n, i) => n === i));
-  sel = null; dibujar();
+
+const ground = M(new THREE.CircleGeometry(200, 64), '#7ccf6a'); ground.rotation.x = -Math.PI / 2;
+
+// Árboles alrededor del campo
+function tree(x, z) {
+  const t = new THREE.Group(); t.position.set(x, 0, z); t.scale.setScalar(rnd(.8, 1.6)); scene.add(t);
+  M(new THREE.CylinderGeometry(.35, .5, 2.4, 8), '#8b5a2b', 0, 1.2, 0, t);
+  const leaf = mat(pick(['#3f9b3a', '#4fb248', '#2f8a3a', '#62c152']), { flatShading: true });
+  if (Math.random() < .5) { M(new THREE.ConeGeometry(2, 3.2, 8), leaf, 0, 3.6, 0, t); M(new THREE.ConeGeometry(1.5, 2.6, 8), leaf, 0, 5, 0, t); }
+  else M(new THREE.IcosahedronGeometry(2.1, 1), leaf, 0, 3.8, 0, t);
 }
-mezclar();
+for (let i = 0; i < 70; i++) { const a = rnd(0, Math.PI * 2), r = rnd(43, 80); tree(Math.sin(a) * r, Math.cos(a) * r); }
+
+// Flores
+const flowers = new THREE.InstancedMesh(new THREE.SphereGeometry(.24, 8, 6), mat('#fff'), 260);
+{
+  const d = new THREE.Object3D();
+  for (let i = 0; i < 260; i++) {
+    let x, z; do { x = rnd(-40, 40); z = rnd(-40, 40); } while ((Math.abs(x) < 8 && Math.abs(z) < 8) || x * x + z * z > 1600);
+    d.position.set(x, .24, z); d.updateMatrix(); flowers.setMatrixAt(i, d.matrix);
+    flowers.setColorAt(i, new THREE.Color(pick(['#ff5fa2', '#ffd93b', '#ffffff', '#b07cff', '#ff8c42'])));
+  }
+  scene.add(flowers);
+}
+
+// Nubes
+const clouds = [];
+for (let i = 0; i < 12; i++) {
+  const c = new THREE.Group();
+  for (let k = 0; k < 5; k++) { const s = M(new THREE.SphereGeometry(rnd(2, 3.5), 14, 10), mat('#fff', { emissive: '#fff', emissiveIntensity: .3 }), rnd(-4, 4), rnd(0, 1.5), rnd(-2, 2), c); s.castShadow = false; }
+  c.position.set(rnd(-120, 120), rnd(24, 34), rnd(-120, 120)); scene.add(c); clouds.push(c);
+}
+
+// La Torre Eiffel a lo lejos (¡Manuelita se fue a París!)
+{
+  const t = new THREE.Group(), c = '#9b7b55';
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const l = M(new THREE.BoxGeometry(.9, 13, .9), c, sx * 3, 6, sz * 3, t); l.rotation.z = sx * .22; l.rotation.x = -sz * .22; }
+  M(new THREE.BoxGeometry(6.5, .7, 6.5), c, 0, 11, 0, t);
+  M(new THREE.CylinderGeometry(.6, 2.3, 12, 4), c, 0, 17, 0, t);
+  M(new THREE.BoxGeometry(3, .5, 3), c, 0, 23, 0, t);
+  M(new THREE.CylinderGeometry(.08, .7, 9, 4), c, 0, 27.5, 0, t);
+  t.position.set(-30, 0, -85); t.scale.setScalar(1.3); scene.add(t);
+}
+
+// Cartel
+function sign(text, x, z, ry) {
+  const s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = ry; scene.add(s);
+  M(new THREE.CylinderGeometry(.15, .15, 3, 8), '#8b5a2b', 0, 1.5, 0, s);
+  const c = document.createElement('canvas'); c.width = 320; c.height = 110; const x2 = c.getContext('2d');
+  x2.fillStyle = '#fff4d6'; x2.fillRect(0, 0, 320, 110); x2.lineWidth = 12; x2.strokeStyle = '#8b5a2b'; x2.strokeRect(6, 6, 308, 98);
+  x2.fillStyle = '#2a7a3b'; x2.font = '800 54px "Baloo 2", sans-serif'; x2.textAlign = 'center'; x2.fillText(text, 160, 75);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const wood = mat('#8b5a2b'), face = mat('#fff', { map: t });
+  M(new THREE.BoxGeometry(3.4, 1.2, .15), [wood, wood, wood, wood, face, face], 0, 3, 0, s);
+}
+sign('Pehuajó', -5.5, 13, 0.3);
+
+// ---------- Tablero ----------
+const SIZE = 4.1, GAP = 4.3;
+const slotPos = n => new THREE.Vector3((n % 3 - 1) * GAP, .3, (Math.floor(n / 3) - 1) * GAP);
+M(new THREE.BoxGeometry(13.2, .3, 13.2), '#c98a4b', 0, .15, 0);
+[[0, 6.9, 14.6, .8], [0, -6.9, 14.6, .8], [6.9, 0, .8, 13.2], [-6.9, 0, .8, 13.2]].forEach(([x, z, w, d]) => M(new THREE.BoxGeometry(w, .6, d), '#ff4f9a', x, .3, z));
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 16, 32, 1, true),
+  new THREE.MeshBasicMaterial({ color: '#fff36b', transparent: true, opacity: .3, depthWrite: false, side: THREE.DoubleSide }));
+beam.visible = false; scene.add(beam);
+
+// ---------- Piezas ----------
+const COLORS = ['#ff5fa2', '#ff8c42', '#ffd93b', '#7ed957', '#3fc7f5', '#6c7bff', '#b07cff', '#ff6b6b', '#2ecfa8'];
+const pieceGeo = new THREE.BoxGeometry(SIZE, .35, SIZE);
+const pieces = tex.map((t, n) => {
+  const side = mat(COLORS[n], { emissive: COLORS[n], emissiveIntensity: .35 });
+  const top = mat('#fff', { map: t, emissive: '#fff', emissiveMap: t, emissiveIntensity: .2 });
+  const mesh = M(pieceGeo, [side, side, top, side, side, side]);
+  mesh.rotation.order = 'YXZ';
+  const ghost = new THREE.Mesh(new THREE.PlaneGeometry(SIZE, SIZE).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: .28 }));
+  ghost.position.copy(slotPos(n)).y += .01; scene.add(ghost);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(2, .12, 8, 40).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#fff36b' }));
+  scene.add(ring);
+  return { n, mesh, ghost, ring, state: 'free', home: new THREE.Vector3(), anim: 0, from: new THREE.Vector3() };
+});
+
+// ---------- Manuelita ----------
+const turtle = new THREE.Group(); scene.add(turtle);
+const body = new THREE.Group(); turtle.add(body);
+const skin = mat('#8fd18a');
+{
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const s = c.getContext('2d');
+  s.fillStyle = '#2b6a23'; s.fillRect(0, 0, 512, 256); s.lineWidth = 8; s.strokeStyle = '#2b6a23';
+  for (let r = 0; r < 5; r++) for (let k = 0; k < 9; k++) { hexPath(s, k * 64 + (r % 2 ? 32 : 0), r * 56 + 10, 32); s.fillStyle = (r + k) % 2 ? '#58a84a' : '#4a9a3e'; s.fill(); s.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const shell = M(new THREE.SphereGeometry(1.5, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), mat('#fff', { map: t }), 0, .45, 0, body);
+  shell.scale.set(1, .8, 1.2);
+  M(new THREE.CylinderGeometry(1.55, 1.42, .3, 32), '#f0c85a', 0, .45, 0, body).scale.z = 1.2;
+}
+const head = new THREE.Group(); head.position.set(0, 1.0, 2.0); body.add(head);
+M(new THREE.SphereGeometry(.68, 24, 16), skin, 0, 0, 0, head);
+for (const s of [-1, 1]) {
+  M(new THREE.SphereGeometry(.2, 16, 12), '#fff', s * .27, .25, .5, head);
+  M(new THREE.SphereGeometry(.1, 12, 8), '#222', s * .29, .27, .67, head);
+  M(new THREE.SphereGeometry(.11, 12, 8), mat('#ff6fa8', { transparent: true, opacity: .7 }), s * .45, -.05, .45, head).scale.z = .4;
+  const bow = M(new THREE.ConeGeometry(.26, .55, 12), '#ff4f9a', -s * .3, .7, -.1, head); bow.rotation.z = -s * Math.PI / 2;
+}
+M(new THREE.SphereGeometry(.14, 12, 8), '#d6337a', 0, .7, -.1, head);
+const smile = M(new THREE.TorusGeometry(.2, .04, 8, 16, Math.PI), '#2b5a23', 0, -.12, .64, head); smile.rotation.z = Math.PI;
+const legs = [[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([x, z]) => {
+  const p = new THREE.Group(); p.position.set(x * 1.05, .62, z * 1.0); body.add(p);
+  M(new THREE.CylinderGeometry(.32, .38, .7, 12).translate(0, -.35, 0), skin, 0, 0, 0, p); return p;
+});
+M(new THREE.ConeGeometry(.18, .6, 8).rotateX(-Math.PI / 2), skin, 0, .45, -1.95, body);
+
+// Flecha guía
+const arrow = new THREE.Mesh(new THREE.ConeGeometry(.5, 1.2, 4).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#ffd000' }));
+arrow.scale.y = .5; scene.add(arrow);
+
+// Confeti
+const confGeo = new THREE.PlaneGeometry(.25, .4), conf = [];
+for (let i = 0; i < 300; i++) {
+  const m = new THREE.Mesh(confGeo, new THREE.MeshBasicMaterial({ color: pick(COLORS), side: THREE.DoubleSide }));
+  m.visible = false; scene.add(m); conf.push({ m, v: new THREE.Vector3(), life: 0 });
+}
+function burst(p, n = 60, pw = 8) {
+  let k = 0;
+  for (const c of conf) {
+    if (c.life > 0) continue;
+    c.m.position.copy(p); c.v.set(rnd(-.5, .5) * pw, rnd(.6, 1.6) * pw, rnd(-.5, .5) * pw); c.life = 2.5; c.m.visible = true;
+    if (++k >= n) break;
+  }
+}
+
+// ---------- Sonidos ----------
+let ac;
+function tone(f, t0, d = .18) {
+  if (!ac) return;
+  const o = ac.createOscillator(), v = ac.createGain(), t = ac.currentTime + t0;
+  o.type = 'triangle'; o.frequency.value = f;
+  v.gain.setValueAtTime(.0001, t); v.gain.exponentialRampToValueAtTime(.25, t + .02); v.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(v).connect(ac.destination); o.start(t); o.stop(t + d + .05);
+}
+const melody = (notes, step = .12) => notes.forEach((f, i) => tone(f, i * step, step * 2));
+
+// ---------- Controles ----------
+const keys = {}, pad = {};
+const KEYMAP = { ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down', ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ' ': 'jump' };
+addEventListener('keydown', e => { if (KEYMAP[e.key]) { keys[KEYMAP[e.key]] = true; e.preventDefault(); } });
+addEventListener('keyup', e => { if (KEYMAP[e.key]) keys[KEYMAP[e.key]] = false; });
+document.querySelectorAll('#pad button').forEach(b => {
+  const k = b.dataset.k, on = v => e => { pad[k] = v; e.preventDefault(); };
+  b.addEventListener('pointerdown', on(true));
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, on(false)));
+});
+const held = k => keys[k] || pad[k];
+
+// ---------- Juego ----------
+let playing = false, won = false, placed = 0, carry = null, ang = Math.PI, speed = 0, vy = 0, walk = 0, winTime = 0, msgTimer;
+const camLook = new THREE.Vector3();
+function say(t, ms = 3000) { const m = $('msg'); m.textContent = t; m.classList.remove('off'); clearTimeout(msgTimer); msgTimer = setTimeout(() => m.classList.add('off'), ms); }
+const count = () => $('count').textContent = `🧩 ${placed} / 9`;
+const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+
+function reset() {
+  placed = 0; carry = null; won = false; winTime = 0; ang = Math.PI; speed = vy = 0;
+  turtle.position.set(0, 0, 11); turtle.rotation.set(0, ang, 0);
+  const order = [...Array(9).keys()].sort(() => Math.random() - .5);
+  pieces.forEach(p => {
+    const a = order[p.n] / 9 * Math.PI * 2 + rnd(0, .5), r = rnd(14, 34);
+    p.home.set(Math.sin(a) * r, 0, Math.cos(a) * r);
+    p.state = 'free'; p.ghost.visible = p.ring.visible = true;
+    p.mesh.position.copy(p.home); p.mesh.scale.setScalar(.7); p.mesh.rotation.set(.35, 0, 0);
+    p.ring.position.set(p.home.x, .06, p.home.z);
+  });
+  beam.visible = false; count();
+}
+
+$('play').onclick = () => {
+  ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume();
+  $('start').classList.add('off'); playing = true;
+  melody([523, 659, 784]); say('¡Busca las piezas brillantes! Sigue la flecha amarilla ✨', 4500);
+};
+$('again').onclick = () => { $('win').classList.add('off'); reset(); playing = true; say('¡Otra vez! Las piezas se mezclaron 🌀'); };
+
+function update(dt, time) {
+  const onBoard = Math.abs(turtle.position.x) < 6.6 && Math.abs(turtle.position.z) < 6.6;
+  const floor = onBoard ? .3 : 0;
+  let grounded = turtle.position.y <= floor + .001;
+
+  if (playing && !won) {
+    ang += ((held('left') ? 1 : 0) - (held('right') ? 1 : 0)) * 2.6 * dt;
+    const target = ((held('up') ? 1 : 0) - (held('down') ? .6 : 0)) * 9;
+    speed += (target - speed) * Math.min(1, dt * 6);
+    if (held('jump') && grounded) { vy = 8; grounded = false; melody([392, 587], .06); }
+  } else speed *= .9;
+  if (won) { ang += dt * 3; if (grounded && Math.random() < .03) vy = 6; }
+
+  const p = turtle.position;
+  p.x += Math.sin(ang) * speed * dt; p.z += Math.cos(ang) * speed * dt;
+  const r = Math.hypot(p.x, p.z); if (r > 38) { p.x *= 38 / r; p.z *= 38 / r; }
+  vy -= 22 * dt; p.y += vy * dt;
+  if (p.y < floor) { p.y = floor; vy = 0; }
+  turtle.rotation.y = ang;
+
+  walk += dt * Math.abs(speed);
+  const step = Math.min(1, Math.abs(speed) / 3);
+  legs.forEach((l, i) => l.rotation.x = Math.sin(walk * 1.5 + (i === 1 || i === 2 ? Math.PI : 0)) * .6 * step);
+  body.position.y = Math.abs(Math.sin(walk * 1.5)) * .12 * step;
+  head.rotation.y = Math.sin(time * 1.5) * .15; head.position.y = 1.0 + Math.sin(time * 3) * .04;
+
+  // Piezas
+  for (const pc of pieces) {
+    const m = pc.mesh;
+    if (pc.state === 'free') {
+      m.position.y = 1.5 + Math.sin(time * 2 + pc.n) * .3; m.rotation.y += dt * 1.2;
+      pc.ring.scale.setScalar(1 + Math.sin(time * 4 + pc.n) * .1);
+      if (!carry && playing && dist2(p, m.position) < 2.6) {
+        carry = pc; pc.state = 'carried'; pc.ring.visible = false;
+        melody([523, 659, 784]); burst(m.position, 25, 5);
+        say('¡Tienes una pieza! Llévala a la luz del tablero 💡');
+      }
+    } else if (pc.state === 'carried') {
+      m.position.lerp(new THREE.Vector3(p.x, p.y + 2.8 + Math.sin(time * 4) * .15, p.z), Math.min(1, dt * 10));
+      m.rotation.y += dt * 2;
+      if (dist2(p, slotPos(pc.n)) < 2.2) { pc.state = 'placing'; pc.anim = 0; pc.from.copy(m.position); carry = null; beam.visible = false; }
+    } else if (pc.state === 'placing') {
+      pc.anim = Math.min(1, pc.anim + dt / .6);
+      const e = pc.anim * pc.anim * (3 - 2 * pc.anim), to = slotPos(pc.n);
+      m.position.lerpVectors(pc.from, to, e); m.position.y = THREE.MathUtils.lerp(pc.from.y, to.y + .175, e) + Math.sin(Math.PI * pc.anim) * 2;
+      m.rotation.y *= 1 - e; m.rotation.x = .35 * (1 - e); m.scale.setScalar(.7 + .3 * e);
+      if (pc.anim >= 1) {
+        pc.state = 'placed'; pc.ghost.visible = false; m.rotation.set(0, 0, 0); placed++; count();
+        burst(m.position, 50, 7); melody([523, 659, 784, 1047]);
+        if (placed === 9) {
+          won = true; say('¡Armaste a Manuelita! 🎉🐢', 5000);
+          melody([523, 523, 587, 659, 587, 523, 659, 784, 1047, 784, 1047], .16);
+          setTimeout(() => $('win').classList.remove('off'), 3500);
+        } else say(pick(['¡Muy bien! 🌟', '¡Genial! 🎉', '¡Excelente! 👏', '¡Bravo, Manuelita! 🐢']) + ` Faltan ${9 - placed}`);
+      }
+    }
+  }
+
+  // Luz sobre el lugar correcto
+  if (carry) {
+    const s = slotPos(carry.n); beam.visible = true; beam.position.set(s.x, 8, s.z);
+    beam.material.opacity = .22 + Math.sin(time * 5) * .1;
+    carry.ghost.material.opacity = .35 + Math.sin(time * 6) * .25;
+  }
+  pieces.forEach(pc => { if (pc !== carry) pc.ghost.material.opacity = .28; });
+
+  // Flecha guía
+  let tgt = null;
+  if (carry) tgt = slotPos(carry.n);
+  else { let best = 1e9; for (const pc of pieces) if (pc.state === 'free') { const d = dist2(p, pc.mesh.position); if (d < best) { best = d; tgt = pc.mesh.position; } } }
+  arrow.visible = playing && !won && !!tgt && dist2(p, tgt) > 3;
+  if (arrow.visible) {
+    const a = Math.atan2(tgt.x - p.x, tgt.z - p.z), off = 2.8 + Math.sin(time * 6) * .3;
+    arrow.position.set(p.x + Math.sin(a) * off, p.y + .5, p.z + Math.cos(a) * off); arrow.rotation.y = a;
+  }
+
+  // Fiesta final
+  if (won) { winTime += dt; if (winTime > .35) { winTime = 0; burst(new THREE.Vector3(rnd(-6, 6), 1, rnd(-6, 6)), 30, 9); } }
+
+  for (const c of conf) {
+    if (c.life <= 0) continue;
+    c.life -= dt; if (c.life <= 0) { c.m.visible = false; continue; }
+    c.v.y -= 12 * dt; c.m.position.addScaledVector(c.v, dt);
+    if (c.m.position.y < .05) { c.m.position.y = .05; c.v.set(0, 0, 0); } else { c.m.rotation.x += dt * 6; c.m.rotation.y += dt * 4; }
+  }
+  clouds.forEach(c => { c.position.x += dt * 1.5; if (c.position.x > 130) c.position.x = -130; });
+
+  // Cámara
+  let camPos, look;
+  if (!playing) { const a = time * .15; camPos = new THREE.Vector3(Math.sin(a) * 26, 14, Math.cos(a) * 26); look = new THREE.Vector3(0, 0, 0); }
+  else if (won) { camPos = new THREE.Vector3(0, 19, 13); look = new THREE.Vector3(0, 0, 1); }
+  else { camPos = new THREE.Vector3(p.x - Math.sin(ang) * 9, p.y + 5.5, p.z - Math.cos(ang) * 9); look = new THREE.Vector3(p.x, p.y + 1.5, p.z); }
+  const k = 1 - Math.exp(-dt * 4);
+  camera.position.lerp(camPos, k); camLook.lerp(look, k); camera.lookAt(camLook);
+
+  sun.position.set(p.x + 20, 40, p.z + 15); sun.target.position.copy(p);
+}
+
+reset();
+camera.position.set(0, 14, 26);
+const clock = new THREE.Clock(); let time = 0;
+renderer.setAnimationLoop(() => { const dt = Math.min(clock.getDelta(), .05); time += dt; update(dt, time); renderer.render(scene, camera); });
 </script>
 </body>
 </html>
