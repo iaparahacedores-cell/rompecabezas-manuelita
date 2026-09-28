@@ -4,6 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Manuelita 3D</title>
+<meta name="description" content="Ayuda a Manuelita a juntar las piezas de su rompecabezas en un mundo 3D. Un juego para chicos.">
+<meta name="theme-color" content="#2a7a3b">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Manuelita">
+<meta property="og:type" content="website">
+<meta property="og:title" content="🐢 Manuelita y el rompecabezas mágico">
+<meta property="og:description" content="Un juego en 3D para chicos: ayuda a Manuelita a armar su rompecabezas. ¡A jugar!">
+<meta property="og:url" content="https://rompecabezas-manuelita.vercel.app/">
+<meta property="og:image" content="https://rompecabezas-manuelita.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
@@ -14,7 +32,7 @@ canvas{display:block}
 #msg{position:fixed;top:90px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);background:#fff;color:#c2346f;border-radius:20px;padding:6px 18px;font-size:22px;font-weight:800;text-align:center;box-shadow:0 5px 0 #c2346f;transition:opacity .4s}
 #msg.off{opacity:0}
 .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0005;padding:16px}
-.ov.off{display:none}
+.ov.off,.link.off{display:none}
 .card{background:#fff;border-radius:28px;padding:22px;max-width:420px;text-align:center;box-shadow:0 8px 0 #2a7a3b}
 .card h1{margin:0;color:#2a7a3b;font-size:34px;line-height:1.1}
 .card p{font-size:19px;color:#355;margin:10px 0 18px}
@@ -22,6 +40,9 @@ canvas{display:block}
 .big{font:inherit;font-size:26px;font-weight:800;padding:10px 34px;border:0;border-radius:40px;background:#ff4f9a;color:#fff;box-shadow:0 6px 0 #c2346f;cursor:pointer}
 .big:active{transform:translateY(4px);box-shadow:0 2px 0 #c2346f}
 #pad button{position:fixed;width:74px;height:74px;border-radius:50%;border:0;background:#fffd;font-size:32px;color:#2a7a3b;box-shadow:0 5px 0 #0003;touch-action:none}
+.link{font:inherit;font-size:19px;font-weight:800;margin-top:14px;padding:6px 18px;border:3px solid #2a7a3b;border-radius:30px;background:#fff;color:#2a7a3b;cursor:pointer}
+.steps{text-align:left;font-size:19px;color:#355;margin:12px 0 18px;padding-left:26px}
+.steps li{margin:6px 0}
 #pad button:active{transform:translateY(3px)}
 </style>
 </head>
@@ -40,7 +61,13 @@ canvas{display:block}
   <p>Las piezas del dibujo de Manuelita se perdieron en el campo de Pehuajó.<br>
   <b>Camina</b> con las flechas, <b>salta</b> con ⭐ (o espacio), junta las piezas brillantes
   y llévalas a su lugar en el tablero. ¡Sigue la flecha amarilla!</p>
-  <button class="big" id="play">¡A jugar!</button>
+  <button class="big" id="play">¡A jugar!</button><br>
+  <button class="link off" id="installBtn">📲 Poner el juego en mi celular</button>
+</div></div>
+<div id="inst" class="ov off"><div class="card">
+  <h1>📲 Ponlo en tu pantalla de inicio</h1>
+  <ol class="steps" id="steps"></ol>
+  <button class="big" id="instOk">¡Entendido!</button>
 </div></div>
 <div id="win" class="ov off"><div class="card">
   <h1>🎉 ¡Lo lograste! 🎉</h1>
@@ -49,6 +76,44 @@ canvas{display:block}
   <button class="big" id="again">Jugar otra vez</button>
 </div></div>
 
+<script>
+// ---------- Instalar como app en el celular ----------
+(() => {
+  const ua = navigator.userAgent, $ = id => document.getElementById(id);
+  const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(ua);
+  const inApp = /FBAN|FBAV|Instagram|Line\/|MicroMessenger/.test(ua);
+  let prompt = null;
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js');
+  if (standalone) return;
+  const btn = $('installBtn');
+  const show = () => btn.classList.remove('off');
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); prompt = e; show(); });
+  addEventListener('appinstalled', () => btn.classList.add('off'));
+  if (ios || android) show();
+
+  function steps() {
+    const share = '<b>Compartir</b> <svg width="20" height="24" viewBox="0 0 20 24" style="vertical-align:-4px" fill="none" stroke="#007aff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15V2M5 7l5-5 5 5M6 10H3v12h14V10h-3"/></svg>';
+    if (inApp) return ['Toca los <b>tres puntitos</b> (⋯ o ⋮) de arriba.', 'Elige <b>"Abrir en el navegador"</b> (Safari o Chrome).', 'Allí vuelve a tocar <b>📲 Poner el juego en mi celular</b>.'];
+    if (ios) {
+      if (/CriOS/.test(ua)) return ['Toca el botón ' + share + ' <b>arriba a la derecha</b>, en la barra de la dirección.', 'Baja y elige <b>"Agregar a inicio"</b> ➕.', 'Toca <b>"Agregar"</b>. ¡Listo, Manuelita aparece en tu pantalla! 🐢', 'Si no ves la opción, abre esta página en <b>Safari</b>.'];
+      if (/FxiOS|EdgiOS|OPiOS/.test(ua)) return ['Toca el <b>menú</b> (☰ o ⋯).', 'Elige ' + share + '.', 'Elige <b>"Agregar a inicio"</b> ➕ y toca <b>"Agregar"</b>.', 'Si no ves la opción, abre esta página en <b>Safari</b>.'];
+      return ['Toca el botón ' + share + ' (el cuadrado con la flechita, abajo o arriba de la pantalla).', 'Baja y elige <b>"Agregar a inicio"</b> ➕.', 'Toca <b>"Agregar"</b>. ¡Listo, Manuelita aparece en tu pantalla! 🐢'];
+    }
+    if (/SamsungBrowser/.test(ua)) return ['Toca el <b>menú ☰</b> abajo a la derecha.', 'Elige <b>"Agregar página a"</b>.', 'Elige <b>"Pantalla de inicio"</b>. ¡Listo! 🐢'];
+    if (/Firefox/.test(ua)) return ['Toca el <b>menú ⋮</b>.', 'Elige <b>"Instalar"</b> o <b>"Agregar a pantalla de inicio"</b>.', '¡Listo, Manuelita aparece en tu pantalla! 🐢'];
+    if (android) return ['Toca el <b>menú ⋮</b> arriba a la derecha.', 'Elige <b>"Instalar app"</b> o <b>"Agregar a la pantalla principal"</b>.', 'Toca <b>"Instalar"</b>. ¡Listo, Manuelita aparece en tu pantalla! 🐢'];
+    return ['En tu celular abre esta página en el navegador.', 'Toca <b>📲 Poner el juego en mi celular</b> y sigue los pasos.'];
+  }
+  btn.onclick = async () => {
+    if (prompt) { prompt.prompt(); const r = await prompt.userChoice; prompt = null; if (r.outcome === 'accepted') btn.classList.add('off'); return; }
+    $('steps').innerHTML = steps().map(s => '<li>' + s + '</li>').join('');
+    $('inst').classList.remove('off');
+  };
+  $('instOk').onclick = () => $('inst').classList.add('off');
+})();
+</script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
